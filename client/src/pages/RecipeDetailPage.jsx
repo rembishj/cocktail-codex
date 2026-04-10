@@ -3,18 +3,6 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { ArrowLeft, Edit2, Trash2, CheckCircle2, XCircle, GlassWater, AlertCircle } from 'lucide-react'
 import { api } from '../api/client'
 
-const CATEGORY_COLOR = {
-  spirit: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  liqueur: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-  wine: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
-  beer: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-  mixer: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  juice: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
-  syrup: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
-  bitters: 'bg-red-500/20 text-red-300 border-red-500/30',
-  garnish: 'bg-green-500/20 text-green-300 border-green-500/30',
-  other: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30',
-}
 
 export default function RecipeDetailPage() {
   const { id } = useParams()
@@ -153,13 +141,14 @@ export default function RecipeDetailPage() {
 }
 
 function IngredientRow({ ing }) {
-  const colors = CATEGORY_COLOR[ing.category] || CATEGORY_COLOR.other
-  const missingStyle = !ing.in_stock && !ing.optional
-    ? 'bg-red-950/30 border-red-900/40 text-red-300'
-    : colors
+  const style = ing.optional
+    ? 'bg-zinc-900 border-zinc-800 text-zinc-400'
+    : ing.in_stock
+    ? 'bg-emerald-950/40 border-emerald-900/50 text-emerald-300'
+    : 'bg-red-950/40 border-red-900/50 text-red-300'
 
   return (
-    <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${missingStyle}`}>
+    <div className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${style}`}>
       <span className="text-sm font-medium">{ing.ingredient_name}</span>
       {(ing.amount || ing.unit) && (
         <span className="text-sm opacity-70">

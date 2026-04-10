@@ -1,19 +1,6 @@
 import { Link } from 'react-router-dom'
 import { CheckCircle2, XCircle, GlassWater } from 'lucide-react'
 
-const CATEGORY_COLOR = {
-  spirit: 'bg-amber-500/20 text-amber-300',
-  liqueur: 'bg-purple-500/20 text-purple-300',
-  wine: 'bg-rose-500/20 text-rose-300',
-  beer: 'bg-yellow-500/20 text-yellow-300',
-  mixer: 'bg-blue-500/20 text-blue-300',
-  juice: 'bg-orange-500/20 text-orange-300',
-  syrup: 'bg-pink-500/20 text-pink-300',
-  bitters: 'bg-red-500/20 text-red-300',
-  garnish: 'bg-green-500/20 text-green-300',
-  other: 'bg-zinc-500/20 text-zinc-300',
-}
-
 export default function RecipeCard({ recipe }) {
   const { id, name, glass_type, can_make, ingredients = [] } = recipe
 
@@ -45,8 +32,8 @@ export default function RecipeCard({ recipe }) {
               ing.optional
                 ? 'bg-zinc-800 text-zinc-400 border border-zinc-700'
                 : ing.in_stock
-                ? CATEGORY_COLOR[ing.category] || CATEGORY_COLOR.other
-                : 'bg-red-950/50 text-red-400 border border-red-900/50'
+                ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-900/50'
+                : 'bg-red-950/60 text-red-400 border border-red-900/50'
             }`}
           >
             {ing.ingredient_name}
