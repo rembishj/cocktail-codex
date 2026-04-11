@@ -1,7 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { Search, SlidersHorizontal, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { api } from '../api/client'
 import RecipeCard from '../components/RecipeCard'
+
+// Pick the spirit with the largest amount (or first listed) as the category header
+function getBaseSpirit(recipe) {
+  const spirits = recipe.ingredients
+    .filter(i => i.category === 'spirit' && !i.optional)
+    .sort((a, b) => (parseFloat(b.amount) || 0) - (parseFloat(a.amount) || 0))
+  return spirits[0]?.ingredient_name || 'Other'
+}
 
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState([])
@@ -15,7 +23,29 @@ export default function RecipesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [ingSearch, setIngSearch] = useState('')
   const [showIngDropdown, setShowIngDropdown] = useState(false)
+  const [collapsed, setCollapsed] = useState({})
   const ingInputRef = useRef(null)
+
+  const grouped = useMemo(() => {
+    const groups = {}
+    for (const recipe of recipes) {
+      const spirit = getBaseSpirit(recipe)
+      if (!groups[spirit]) groups[spirit] = []
+      groups[spirit].push(recipe)
+    }
+    // Sort: alphabetical, "Other" always last
+    return Object.fromEntries(
+      Object.entries(groups).sort(([a], [b]) => {
+        if (a === 'Other') return 1
+        if (b === 'Other') return -1
+        return a.localeCompare(b)
+      })
+    )
+  }, [recipes])
+
+  function toggleCollapse(spirit) {
+    setCollapsed(prev => ({ ...prev, [spirit]: !prev[spirit] }))
+  }
 
   const fetchRecipes = useCallback(async () => {
     setLoading(true)
@@ -204,8 +234,27 @@ export default function RecipesPage() {
           </div>
         )}
 
-        {!loading && !error && recipes.map(recipe => (
-          <RecipeCard key={recipe.id} recipe={recipe} />
+        {!loading && !error && Object.entries(grouped).map(([spirit, spiritRecipes]) => (
+          <div key={spirit}>
+            <button
+              onClick={() => toggleCollapse(spirit)}
+              className="w-full flex items-center justify-between py-2 text-xs font-semibold uppercase tracking-widest text-zinc-500 hover:text-zinc-400"
+            >
+              <span>{spirit}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-zinc-600 normal-case tracking-normal">{spiritRecipes.length}</span>
+                {collapsed[spirit] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+              </div>
+            </button>
+
+            {!collapsed[spirit] && (
+              <div className="space-y-3 mb-2">
+                {spiritRecipes.map(recipe => (
+                  <RecipeCard key={recipe.id} recipe={recipe} />
+                ))}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </div>
