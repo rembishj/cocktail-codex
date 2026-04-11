@@ -4,7 +4,11 @@ const pool = require('../db')
 
 // GET /api/recipes — list with optional filters
 router.get('/', async (req, res) => {
-  const { search, ingredient, canMake } = req.query
+  const { search, ingredients: ingredientsParam, canMake } = req.query
+  // ingredients param is comma-separated IDs: "1,4,7"
+  const ingredientIds = ingredientsParam
+    ? ingredientsParam.split(',').map(Number).filter(Boolean)
+    : []
   try {
     let query = `
       SELECT DISTINCT r.id, r.name, r.description, r.glass_type, r.created_at,
@@ -27,9 +31,15 @@ router.get('/', async (req, res) => {
       conditions.push(`r.name ILIKE $${params.length}`)
     }
 
-    if (ingredient) {
-      params.push(parseInt(ingredient))
-      query += ` JOIN recipe_ingredients ri_filter ON ri_filter.recipe_id = r.id AND ri_filter.ingredient_id = $${params.length}`
+    // All selected ingredients must exist in the recipe
+    if (ingredientIds.length > 0) {
+      params.push(ingredientIds)
+      conditions.push(`(
+        SELECT COUNT(DISTINCT ri_f.ingredient_id)
+        FROM recipe_ingredients ri_f
+        WHERE ri_f.recipe_id = r.id
+          AND ri_f.ingredient_id = ANY($${params.length})
+      ) = ${ingredientIds.length}`)
     }
 
     if (conditions.length) {

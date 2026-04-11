@@ -1,18 +1,21 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { api } from '../api/client'
 import RecipeCard from '../components/RecipeCard'
 
 export default function RecipesPage() {
   const [recipes, setRecipes] = useState([])
-  const [ingredients, setIngredients] = useState([])
+  const [allIngredients, setAllIngredients] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const [search, setSearch] = useState('')
   const [canMake, setCanMake] = useState(false)
-  const [selectedIngredient, setSelectedIngredient] = useState('')
+  const [selectedIngredients, setSelectedIngredients] = useState([]) // [{ id, name }]
   const [showFilters, setShowFilters] = useState(false)
+  const [ingSearch, setIngSearch] = useState('')
+  const [showIngDropdown, setShowIngDropdown] = useState(false)
+  const ingInputRef = useRef(null)
 
   const fetchRecipes = useCallback(async () => {
     setLoading(true)
@@ -21,7 +24,7 @@ export default function RecipesPage() {
       const data = await api.getRecipes({
         search: search || undefined,
         canMake: canMake ? 'true' : undefined,
-        ingredient: selectedIngredient || undefined,
+        ingredients: selectedIngredients.length ? selectedIngredients.map(i => i.id) : undefined,
       })
       setRecipes(data)
     } catch (e) {
@@ -29,15 +32,38 @@ export default function RecipesPage() {
     } finally {
       setLoading(false)
     }
-  }, [search, canMake, selectedIngredient])
+  }, [search, canMake, selectedIngredients])
 
   useEffect(() => { fetchRecipes() }, [fetchRecipes])
 
   useEffect(() => {
-    api.getIngredients().then(setIngredients).catch(() => {})
+    api.getIngredients().then(setAllIngredients).catch(() => {})
   }, [])
 
-  const activeFilters = (canMake ? 1 : 0) + (selectedIngredient ? 1 : 0)
+  function addIngredient(ing) {
+    if (!selectedIngredients.find(i => i.id === ing.id)) {
+      setSelectedIngredients(prev => [...prev, { id: ing.id, name: ing.name }])
+    }
+    setIngSearch('')
+    setShowIngDropdown(false)
+  }
+
+  function removeIngredient(id) {
+    setSelectedIngredients(prev => prev.filter(i => i.id !== id))
+  }
+
+  function clearFilters() {
+    setCanMake(false)
+    setSelectedIngredients([])
+    setIngSearch('')
+  }
+
+  const filteredSuggestions = allIngredients.filter(i =>
+    i.name.toLowerCase().includes(ingSearch.toLowerCase()) &&
+    !selectedIngredients.find(s => s.id === i.id)
+  )
+
+  const activeFilters = (canMake ? 1 : 0) + selectedIngredients.length
 
   return (
     <div className="max-w-md mx-auto">
@@ -88,27 +114,56 @@ export default function RecipesPage() {
               </button>
             </label>
 
-            {/* Ingredient filter */}
+            {/* Ingredient multi-select */}
             <div>
-              <label className="text-xs text-zinc-500 mb-1 block">Filter by ingredient</label>
-              <div className="relative">
-                <select
-                  value={selectedIngredient}
-                  onChange={e => setSelectedIngredient(e.target.value)}
-                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 appearance-none focus:outline-none focus:border-amber-500"
-                >
-                  <option value="">Any ingredient</option>
-                  {ingredients.map(i => (
-                    <option key={i.id} value={i.id}>{i.name}</option>
+              <label className="text-xs text-zinc-500 mb-1.5 block">Must contain ingredients</label>
+
+              {/* Selected chips */}
+              {selectedIngredients.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {selectedIngredients.map(ing => (
+                    <span key={ing.id} className="flex items-center gap-1 text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                      {ing.name}
+                      <button onClick={() => removeIngredient(ing.id)} className="hover:text-white">
+                        <X size={10} />
+                      </button>
+                    </span>
                   ))}
-                </select>
-                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none" />
+                </div>
+              )}
+
+              {/* Search input */}
+              <div className="relative">
+                <input
+                  ref={ingInputRef}
+                  type="text"
+                  placeholder="Search ingredients..."
+                  value={ingSearch}
+                  onChange={e => { setIngSearch(e.target.value); setShowIngDropdown(true) }}
+                  onFocus={() => setShowIngDropdown(true)}
+                  onBlur={() => setTimeout(() => setShowIngDropdown(false), 150)}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-amber-500"
+                />
+                {showIngDropdown && filteredSuggestions.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-20 max-h-40 overflow-y-auto">
+                    {filteredSuggestions.map(ing => (
+                      <button
+                        key={ing.id}
+                        type="button"
+                        onMouseDown={() => addIngredient(ing)}
+                        className="w-full text-left px-3 py-2 text-sm text-zinc-200 hover:bg-zinc-700"
+                      >
+                        {ing.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
             {activeFilters > 0 && (
               <button
-                onClick={() => { setCanMake(false); setSelectedIngredient('') }}
+                onClick={clearFilters}
                 className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-300"
               >
                 <X size={12} /> Clear filters

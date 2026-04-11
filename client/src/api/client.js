@@ -16,7 +16,8 @@ async function request(path, options = {}) {
 export const api = {
   // Recipes
   getRecipes: (params = {}) => {
-    const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== '')).toString()
+    const entries = Object.entries(params).filter(([, v]) => v != null && v !== '' && !(Array.isArray(v) && v.length === 0))
+    const qs = new URLSearchParams(entries.map(([k, v]) => [k, Array.isArray(v) ? v.join(',') : v])).toString()
     return request(`/recipes${qs ? '?' + qs : ''}`)
   },
   getRecipe: (id) => request(`/recipes/${id}`),
